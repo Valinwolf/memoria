@@ -1,4 +1,5 @@
 import PouchDB from "pouchdb-browser";
+import * as Keychain from 'react-native-keychain';
 
 import { getPreference, setPreference } from "./preferences";
 
@@ -6,20 +7,27 @@ export interface Credentials {
   address: string;
   username: string;
   password: string;
+  e2e: bool;
+  e2e_key: string;
 }
 
 export const getCredentials = async (): Promise<Credentials> => {
   return {
     address: await getPreference("remote_address"),
-    username: await getPreference("remote_username"),
-    password: await getPreference("remote_password"),
+    username: await getInternetCredentials(address).username,
+    password: await getInternetCredentials(address).password,
+    e2e: await getPreference("e2e"),
+		e2e_key: (e2e) ? await getInternetCredentials("memoria.e2e.key").password : "",
   };
 };
 
 export const setCredentials = (credentials: Credentials) => {
   setPreference("remote_address", credentials.address);
-  setPreference("remote_username", credentials.username);
-  setPreference("remote_password", credentials.password);
+	setPreference("e2e", credentials.e2e);
+  (async() => {
+		await setInternetCredentials(credentials.address, credentials.username, credentials.password);
+		await setInternetCredentials("memoria.e2e.key", "", credentials.e2e_key);
+	})();
 };
 
 export const syncDatabase = async (
